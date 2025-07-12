@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Editable Polygon Map (Import/Export)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+
+    .buttons {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .buttons button {
+      margin: 5px 0;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+<div class="buttons">
+  <button onclick="exportGeoJSON()">💾 Export GeoJSON</button>
+  <input type="file" id="importFile" accept=".geojson" />
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+<script>
+  const mapWidth = 18657;
+  const mapHeight = 18658;
+
+  const map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -5,
+    maxZoom: 4,
+    zoomSnap: 0.1
+  });
+
+  const bounds = [[0, 0], [mapHeight, mapWidth]];
+  L.imageOverlay('BIG MAP.png', bounds).addTo(map);
+  map.fitBounds(bounds);
+
+  const drawnItems = new L.FeatureGroup();
+  map.addLayer(drawnItems);
+
+  const drawControl = new L.Control.Draw({
+    draw: {
+      polygon: true,
+      polyline: false,
+      rectangle: false,
+      circle: false,
+      marker: false,
+      circlemarker: false
+    },
+    edit: {
+      featureGroup: drawnItems
+    }
+  });
+  map.addControl(drawControl);
+
+  map.on(L.Draw.Event.CREATED, function (event) {
+    const layer = event.layer;
+    drawnItems.addLayer(layer);
+  });
+
+  map.on(L.Draw.Event.EDITED, function (event) {
+    // Optional: save edits here
+  });
+
+  map.on(L.Draw.Event.DELETED, function (event) {
+    // Optional: handle deletion
+  });
+
+  // 🔹 EXPORT FUNCTION
+  function exportGeoJSON() {
+    const data = drawnItems.toGeoJSON();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json'
+    });
+
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'map-polygons.geojson';
+    link.click();
+  }
+
+  // 🔹 IMPORT FUNCTION
+  document.getElementById('importFile').addEventListener('change', function(evt) {
+    const file = evt.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const content = e.target.result;
+      try {
+        const geojson = JSON.parse(content);
+        const layer = L.geoJSON(geojson, {
+          onEachFeature: function (feature, layer) {
+            drawnItems.addLayer(layer);
+          }
+        });
+      } catch (err) {
+        alert('Invalid GeoJSON file.');
+      }
+    };
+    reader.readAsText(file);
+  });
+</script>
+
+</body>
+</html>
