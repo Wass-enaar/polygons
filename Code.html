@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interactieve Kaart met PNG</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #map { width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const mapWidth = 1000;
+    const mapHeight = 800;
+
+    // Maak de kaart aan zonder geografisch CRS
+    const map = L.map('map', {
+      crs: L.CRS.Simple,
+      minZoom: -1,
+      maxZoom: 4
+    });
+
+    const bounds = [[0,0], [mapHeight, mapWidth]];
+
+    // Voeg de PNG-afbeelding toe als "tile"
+    const image = L.imageOverlay('BIG MAP.png', bounds).addTo(map);
+
+    map.fitBounds(bounds);
+
+    // Voeg een marker toe op positie (y, x) — bijv. (400, 500)
+    const marker = L.marker([400, 500]).addTo(map)
+      .bindPopup("Hier is een punt op je kaart!");
+
+  </script>
+</body>
+</html>
