@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Editable Polygon Map (Import/Export)</title>
+  <title>Named Polygon Editor (Import + Edit)</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
 
@@ -75,20 +75,35 @@
   });
   map.addControl(drawControl);
 
+  function promptName(defaultName = 'Unnamed Region') {
+    const name = prompt("Enter a name for this region:", defaultName);
+    return name ? name : defaultName;
+  }
+
+  function bindNamePopup(layer, name) {
+    layer.bindTooltip(name, { permanent: false, direction: 'top' });
+    layer.feature = layer.feature || { type: "Feature", properties: {} };
+    layer.feature.properties.name = name;
+  }
+
+  // When a polygon is drawn
   map.on(L.Draw.Event.CREATED, function (event) {
     const layer = event.layer;
+    const name = promptName();
+    bindNamePopup(layer, name);
     drawnItems.addLayer(layer);
   });
 
+  // When polygons are edited
   map.on(L.Draw.Event.EDITED, function (event) {
-    // Optional: save edits here
+    event.layers.eachLayer(function (layer) {
+      if (layer.feature && layer.feature.properties && layer.feature.properties.name) {
+        bindNamePopup(layer, layer.feature.properties.name);
+      }
+    });
   });
 
-  map.on(L.Draw.Event.DELETED, function (event) {
-    // Optional: handle deletion
-  });
-
-  // 🔹 EXPORT FUNCTION
+  // 🔹 Export Function
   function exportGeoJSON() {
     const data = drawnItems.toGeoJSON();
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -97,11 +112,11 @@
 
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'map-polygons.geojson';
+    link.download = 'named-polygons.geojson';
     link.click();
   }
 
-  // 🔹 IMPORT FUNCTION
+  // 🔹 Import Function
   document.getElementById('importFile').addEventListener('change', function(evt) {
     const file = evt.target.files[0];
     if (!file) return;
@@ -111,9 +126,11 @@
       const content = e.target.result;
       try {
         const geojson = JSON.parse(content);
-        const layer = L.geoJSON(geojson, {
+        const layerGroup = L.geoJSON(geojson, {
           onEachFeature: function (feature, layer) {
-            drawnItems.addLayer(layer);
+            const name = feature.properties?.name || 'Unnamed Region';
+            bindNamePopup(layer, name);
+            drawnItems.addLayer(layer);  // 🔥 Add to editable group!
           }
         });
       } catch (err) {
